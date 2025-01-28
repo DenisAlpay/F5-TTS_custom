@@ -154,7 +154,7 @@ def convert_char_to_pinyin(text_list, polyphone=True):
         for seg in jieba.cut(text):
             seg_byte_len = len(bytes(seg, "UTF-8"))
             if seg_byte_len == len(seg):  # if pure alphabets and symbols
-                if char_list and seg_byte_len > 1 and char_list[-1] not in " :'\"":
+                if char_list and seg_byte_len > 1 and char_list[-1] not in " :'\" ğĞüÜşŞiIçÇöÖ":
                     char_list.append(" ")
                 char_list.extend(seg)
             elif polyphone and seg_byte_len == 3 * len(seg):  # if pure east asian characters
