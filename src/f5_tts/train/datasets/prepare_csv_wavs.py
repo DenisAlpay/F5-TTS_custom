@@ -130,10 +130,10 @@ def cli():
     parser.add_argument("out_dir", type=str, help="Output directory to save the prepared data.")
     parser.add_argument("--pretrain", action="store_true", help="Enable for new pretrain, otherwise is a fine-tune")
 
-    #args = parser.parse_args()
+    args = parser.parse_args()
     inp_dir = "/data_perm/all_mp3_data/" 
     out_dir = "/data_perm/F5-TTS_custom/data/turkish_data_char/"
-    prepare_and_save_set(inp_dir, out_dir, is_finetune=True)
+    prepare_and_save_set(args.inp_dir, args.out_dir, is_finetune=not args.pretrain)
 
 
 if __name__ == "__main__":
