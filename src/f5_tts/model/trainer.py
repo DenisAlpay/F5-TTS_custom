@@ -94,7 +94,7 @@ class Trainer:
             self.writer = SummaryWriter(log_dir=f"runs/{wandb_run_name}")
 
         self.model = model
-
+        self.learning_rate = learning_rate
         if self.is_main:
             self.ema_model = EMA(model, include_online_model=False, **ema_kwargs)
             self.ema_model.to(self.accelerator.device)
@@ -233,6 +233,9 @@ class Trainer:
             if self.scheduler:
                 self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
             update = checkpoint["update"]
+            
+            for param_group in self.optimizer.param_groups:
+                param_group["lr"] = self.learning_rate  # Reset to initial LR
         else:
             checkpoint["model_state_dict"] = {
                 k.replace("ema_model.", ""): v
@@ -293,14 +296,13 @@ class Trainer:
 
         #  accelerator.prepare() dispatches batches to devices;
         #  which means the length of dataloader calculated before, should consider the number of devices
-        warmup_updates = (
-            self.num_warmup_updates * self.accelerator.num_processes
-        )  # consider a fixed warmup steps while using accelerate multi-gpu ddp
+        warmup_updates = (self.num_warmup_updates * self.accelerator.num_processes) 
+        # consider a fixed warmup steps while using accelerate multi-gpu ddp
         # otherwise by default with split_batches=False, warmup steps change with num_processes
         total_updates = math.ceil(len(train_dataloader) / self.grad_accumulation_steps) * self.epochs
         decay_updates = total_updates - warmup_updates
-        warmup_scheduler = LinearLR(self.optimizer, start_factor=1e-8, end_factor=1.0, total_iters=warmup_updates)
-        decay_scheduler = LinearLR(self.optimizer, start_factor=1.0, end_factor=1e-8, total_iters=decay_updates)
+        warmup_scheduler = LinearLR(self.optimizer, start_factor=1.0, end_factor=1.0, total_iters=warmup_updates)
+        decay_scheduler = LinearLR(self.optimizer, start_factor=1.0, end_factor=1.0, total_iters=decay_updates)
         self.scheduler = SequentialLR(
             self.optimizer, schedulers=[warmup_scheduler, decay_scheduler], milestones=[warmup_updates]
         )
@@ -328,6 +330,7 @@ class Trainer:
                 progress_bar_initial = 0
                 current_dataloader = train_dataloader
 
+            print(f"current epoch is {epoch}")
             # progress_bar = tqdm(
             #     range(math.ceil(len(train_dataloader) / self.grad_accumulation_steps)),
             #     desc=f"Epoch {epoch+1}/{self.epochs}",
